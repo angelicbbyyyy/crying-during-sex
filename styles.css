@@ -1,0 +1,913 @@
+/* ============================================================
+   crying during sex — "the journal she left by the water"
+   Surfaces: PAPER (life, intimacy) vs LAKE (death, dissociation)
+   ============================================================ */
+
+/* ---- Fonts ---- */
+/* Newsreader = prose (literary serif, optical italics)
+   Special Elite = dates, headers, UI (typewriter)
+   Caveat = raw handwritten margin grief                       */
+
+:root {
+  /* paper surface */
+  --paper:        #e6dcc6;
+  --paper-deep:   #d8cbae;
+  --paper-edge:   #c4b491;
+  --ink:          #241d16;
+  --ink-soft:     #4a3f33;
+  --ink-faint:    #6f6354;
+
+  /* the bruise — used sparingly: love, blood, the body */
+  --bruise:       #872318;
+  --bruise-soft:  #a8473b;
+
+  /* the lake — death, water, dissociation */
+  --lake:         #29474a;
+  --lake-deep:    #16282b;
+  --lake-glow:    #4f8488;
+
+  --redact:       #14100c;
+
+  /* mix knobs (driven by Tweaks) */
+  --grain:        0.5;   /* 0..1 paper texture strength */
+  --glitch:       0.7;   /* 0..1 effect intensity       */
+  --flood:        0;     /* 0..1 how much lake bleeds into paper */
+
+  --prose-size:   1.32rem;
+  --measure:      34rem; /* reading column width */
+
+  --font-prose:  "Newsreader", Georgia, serif;
+  --font-type:   "Special Elite", "Courier New", monospace;
+  --font-hand:   "Caveat", cursive;
+}
+
+/* warm vs drowned mood (Tweaks sets data-mood on <html>) */
+html[data-mood="drowned"] {
+  --paper:      #cdcabb;
+  --paper-deep: #b9b8ac;
+  --paper-edge: #9ea29a;
+  --ink:        #1c2426;
+  --flood:      0.55;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #0c0a08;
+  color: var(--ink);
+  font-family: var(--font-prose);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body { overflow-x: hidden; }
+
+/* ============================================================
+   PAPER TEXTURE  — applied as layered backgrounds + grain
+   ============================================================ */
+.paper-bg {
+  position: relative;
+  background-color: var(--paper);
+  background-image:
+    radial-gradient(120% 80% at 50% -10%, rgba(255,255,255,.18), transparent 60%),
+    radial-gradient(140% 120% at 50% 120%, rgba(20,40,43, calc(.35 * var(--flood))), transparent 55%),
+    repeating-linear-gradient(0deg, rgba(120,100,70,.035) 0 2px, transparent 2px 4px);
+  background-blend-mode: normal, multiply, normal;
+}
+/* grain overlay (procedural via SVG turbulence) */
+.grain::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 60;
+  opacity: calc(var(--grain) * 0.5);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
+}
+/* vignette */
+.vignette::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 55;
+  box-shadow: inset 0 0 14rem rgba(12,10,8,.55);
+}
+
+/* ============================================================
+   GATE — content warning
+   ============================================================ */
+#gate {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background: #0c0a08;
+  color: #d8ccb6;
+  text-align: center;
+  padding: 2rem;
+  transition: opacity 1.2s ease;
+}
+#gate .gate-inner { max-width: 38rem; }
+#gate .cw-kicker {
+  font-family: var(--font-type);
+  letter-spacing: .42em;
+  text-transform: uppercase;
+  font-size: .72rem;
+  color: var(--lake-glow);
+  margin-bottom: 2.4rem;
+}
+#gate .cw-body {
+  font-family: var(--font-prose);
+  font-size: 1.18rem;
+  line-height: 1.85;
+  color: #c9bda7;
+  font-style: italic;
+}
+#gate .cw-list {
+  font-family: var(--font-type);
+  font-size: .82rem;
+  letter-spacing: .04em;
+  line-height: 2.2;
+  color: #8c8576;
+  margin: 2rem 0 2.6rem;
+  text-transform: lowercase;
+}
+#gate .cw-actions { display: flex; flex-direction: column; align-items: center; gap: 1.1rem; }
+.gate-btn {
+  font-family: var(--font-type);
+  letter-spacing: .26em;
+  text-transform: uppercase;
+  font-size: .8rem;
+  color: #0c0a08;
+  background: #d8ccb6;
+  border: none;
+  padding: 1rem 2.6rem;
+  cursor: pointer;
+  transition: background .3s, color .3s, letter-spacing .3s;
+}
+.gate-btn:hover { background: var(--bruise-soft); color: #f4e9d6; letter-spacing: .32em; }
+.gate-leave {
+  font-family: var(--font-type);
+  font-size: .74rem;
+  letter-spacing: .12em;
+  color: #6f6757;
+  text-decoration: none;
+  border-bottom: 1px dotted #4a4438;
+  padding-bottom: 2px;
+}
+.gate-leave:hover { color: #9a8f7d; }
+
+/* ============================================================
+   TITLE / ENTRY
+   ============================================================ */
+#entry {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 6rem 2rem;
+}
+.entry-card { max-width: var(--measure); width: 100%; text-align: center; }
+.entry-meta {
+  font-family: var(--font-type);
+  font-size: .74rem;
+  letter-spacing: .32em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 2.6rem;
+}
+.entry-title {
+  font-family: var(--font-prose);
+  font-weight: 500;
+  font-style: italic;
+  font-size: clamp(2.8rem, 9vw, 5.4rem);
+  line-height: 1.02;
+  letter-spacing: -.01em;
+  color: var(--ink);
+  margin: 0 0 2rem;
+  text-wrap: balance;
+}
+.entry-epigraph {
+  font-family: var(--font-hand);
+  font-size: 1.7rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  max-width: 26rem;
+  margin: 0 auto 3.4rem;
+  transform: rotate(-1.2deg);
+}
+.entry-enter {
+  font-family: var(--font-type);
+  letter-spacing: .3em;
+  text-transform: uppercase;
+  font-size: .8rem;
+  background: none;
+  border: 1px solid var(--ink-soft);
+  color: var(--ink);
+  padding: 1rem 2.8rem;
+  cursor: pointer;
+  transition: all .35s;
+}
+.entry-enter:hover { background: var(--ink); color: var(--paper); letter-spacing: .36em; }
+
+/* ============================================================
+   READER
+   ============================================================ */
+#reader { display: none; }
+#reader.on { display: block; }
+
+.chapter {
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: 14vh 1.6rem;
+}
+.chapter-head { margin-bottom: 4rem; text-align: left; }
+.chapter-num {
+  font-family: var(--font-type);
+  letter-spacing: .4em;
+  text-transform: uppercase;
+  font-size: .72rem;
+  color: var(--ink-faint);
+}
+.chapter-title {
+  font-family: var(--font-prose);
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(2rem, 5vw, 3rem);
+  margin: .7rem 0 0;
+  color: var(--ink);
+}
+.chapter-date {
+  font-family: var(--font-hand);
+  font-size: 1.5rem;
+  color: var(--bruise);
+  transform: rotate(-1.5deg);
+  display: inline-block;
+  margin-top: .8rem;
+}
+
+.prose p {
+  font-size: var(--prose-size);
+  line-height: 1.95;
+  margin: 0 0 1.9rem;
+  color: var(--ink);
+  text-wrap: pretty;
+}
+.prose p.drop::first-letter {
+  font-size: 3.4em;
+  line-height: .8;
+  float: left;
+  padding: .08em .12em 0 0;
+  font-style: italic;
+  color: var(--bruise);
+}
+.prose .hand {
+  font-family: var(--font-hand);
+  font-size: 1.55rem;
+  color: var(--ink-soft);
+  display: block;
+  margin: 2.4rem 0;
+  transform: rotate(-.4deg);
+}
+.scene-break {
+  text-align: center;
+  color: var(--ink-faint);
+  margin: 3.4rem 0;
+  font-size: 1.4rem;
+  letter-spacing: .8em;
+}
+
+/* paced reveal: lines start dim, settle as you reach them */
+.reveal { opacity: .12; transform: translateY(14px); transition: opacity 1.1s ease, transform 1.1s ease; filter: blur(2px); }
+.reveal.seen { opacity: 1; transform: none; filter: none; }
+
+.chapter-end {
+  text-align: center;
+  margin: 7rem 0 2rem;
+  font-family: var(--font-type);
+  letter-spacing: .3em;
+  text-transform: uppercase;
+  font-size: .72rem;
+  color: var(--ink-faint);
+}
+
+/* ============================================================
+   EFFECT: scribble (pen strikes word out when reached)
+   ============================================================ */
+.fx-scribble { position: relative; transition: color .6s ease; }
+.fx-scribble.is-active { color: var(--ink-faint); }
+.fx-scribble::after {
+  content: "";
+  position: absolute;
+  left: -2%; right: -2%; top: 45%;
+  height: .5em;
+  background:
+    repeating-linear-gradient(8deg, var(--ink) 0 3px, transparent 3px 5px),
+    repeating-linear-gradient(-12deg, var(--ink) 0 2px, transparent 2px 6px);
+  transform: scaleX(0);
+  transform-origin: left center;
+  opacity: calc(.55 + .4 * var(--glitch));
+  transition: transform .5s cubic-bezier(.7,0,.3,1);
+}
+.fx-scribble.is-active::after { transform: scaleX(1); }
+
+/* ============================================================
+   EFFECT: redaction bar (slides shut over text she can't write)
+   ============================================================ */
+.fx-redact { position: relative; color: var(--ink); }
+.fx-redact::after {
+  content: "";
+  position: absolute;
+  inset: -.1em -.15em;
+  background: var(--redact);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform .55s cubic-bezier(.6,0,.2,1);
+}
+.fx-redact.is-active { color: transparent; }
+.fx-redact.is-active::after { transform: scaleX(1); }
+
+/* ============================================================
+   EFFECT: erase / dissolve (letters wash away like underwater)
+   spans injected by effects.js
+   ============================================================ */
+.fx-erase .ch, .fx-repress .ch { display: inline-block; transition: opacity .5s ease, transform .7s ease, filter .6s ease; }
+.fx-erase.is-active .ch {
+  opacity: 0;
+  transform: translateY(.5em) scale(1.4);
+  filter: blur(6px);
+  color: var(--lake);
+}
+
+/* repress = surfaces briefly, then drowns back; won't let you read */
+.fx-repress { color: var(--ink); }
+.fx-repress .ch { opacity: 1; }
+.fx-repress.is-active .ch {
+  animation: drown 3.4s ease forwards;
+}
+@keyframes drown {
+  0%   { opacity: 1;  filter: blur(0);   transform: none; color: var(--ink); }
+  35%  { opacity: 1;  filter: blur(0);   color: var(--ink); }
+  70%  { opacity: .35; filter: blur(4px); transform: translateY(.3em); color: var(--lake); }
+  100% { opacity: .04; filter: blur(9px); transform: translateY(.9em) scale(1.3); color: var(--lake-deep); }
+}
+
+/* ============================================================
+   EFFECT: glitch (RGB split + static — the moment breaks through)
+   ============================================================ */
+.fx-glitch { position: relative; display: inline-block; }
+.fx-glitch.is-active { animation: glitchShake calc(.42s / (.4 + var(--glitch))) infinite steps(2); }
+.fx-glitch.is-active::before,
+.fx-glitch.is-active::after {
+  content: attr(data-text);
+  position: absolute;
+  left: 0; top: 0;
+  width: 100%;
+  pointer-events: none;
+  opacity: calc(.75 * var(--glitch));
+}
+.fx-glitch.is-active::before { color: var(--bruise); transform: translate(calc(-2px * var(--glitch)), -1px); clip-path: inset(0 0 55% 0); mix-blend-mode: multiply; animation: glitchA .9s infinite steps(3); }
+.fx-glitch.is-active::after  { color: var(--lake-glow); transform: translate(calc(2px * var(--glitch)), 1px); clip-path: inset(55% 0 0 0); mix-blend-mode: multiply; animation: glitchB 1.1s infinite steps(4); }
+@keyframes glitchShake { 0%{transform:translate(0,0)} 50%{transform:translate(calc(1px*var(--glitch)),calc(-1px*var(--glitch)))} 100%{transform:translate(0,0)} }
+@keyframes glitchA { 0%{clip-path:inset(0 0 70% 0)} 50%{clip-path:inset(30% 0 30% 0)} 100%{clip-path:inset(60% 0 5% 0)} }
+@keyframes glitchB { 0%{clip-path:inset(70% 0 0 0)} 50%{clip-path:inset(20% 0 40% 0)} 100%{clip-path:inset(5% 0 65% 0)} }
+
+/* ============================================================
+   EFFECT: stutter / overwrite (word repeats over itself)
+   ============================================================ */
+.fx-stutter { position: relative; display: inline-block; }
+.fx-stutter.is-active::before,
+.fx-stutter.is-active::after {
+  content: attr(data-text);
+  position: absolute;
+  left: 0; top: 0;
+  color: var(--ink);
+}
+.fx-stutter.is-active::before { opacity: .5; animation: stut1 .18s infinite alternate; }
+.fx-stutter.is-active::after  { opacity: .35; animation: stut2 .13s infinite alternate; }
+@keyframes stut1 { from{transform:translate(-.06em,0)} to{transform:translate(.04em,.02em)} }
+@keyframes stut2 { from{transform:translate(.05em,-.02em)} to{transform:translate(-.05em,.03em)} }
+
+/* ============================================================
+   AUDIO CUE marker (inline, in the text)
+   ============================================================ */
+.audio-cue {
+  border-bottom: 1px dotted var(--bruise);
+  cursor: pointer;
+  position: relative;
+  transition: color .3s;
+}
+.audio-cue:hover { color: var(--bruise); }
+.audio-cue::before {
+  content: "▶";
+  font-family: var(--font-type);
+  font-size: .58em;
+  color: var(--bruise);
+  margin-right: .35em;
+  vertical-align: middle;
+  opacity: .8;
+}
+.audio-cue.playing::before { content: "❚❚"; animation: pulse 1s infinite; }
+@keyframes pulse { 50% { opacity: .35; } }
+
+/* flood overlay — lake creeping up the page on intense scroll */
+#flood {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  height: 0vh;
+  pointer-events: none;
+  z-index: 50;
+  background: linear-gradient(to top, rgba(22,40,43,.5), rgba(22,40,43,0));
+  transition: height 1.2s ease;
+}
+
+/* ============================================================
+   MUSIC PLAYER (dictaphone — bottom left)
+   ============================================================ */
+#player {
+  position: fixed;
+  left: 1.4rem; bottom: 1.4rem;
+  z-index: 70;
+  display: none;
+  align-items: center;
+  gap: .8rem;
+  background: rgba(20,16,12,.86);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(216,204,182,.18);
+  padding: .7rem .9rem .7rem .7rem;
+  font-family: var(--font-type);
+  color: #d8ccb6;
+  max-width: 16rem;
+}
+#reader.on ~ #player { display: flex; }
+.pl-btn {
+  width: 2.1rem; height: 2.1rem;
+  flex: none;
+  border-radius: 50%;
+  border: 1px solid rgba(216,204,182,.4);
+  background: none;
+  color: #d8ccb6;
+  cursor: pointer;
+  font-size: .8rem;
+  display: grid; place-items: center;
+  transition: background .25s, color .25s;
+}
+.pl-btn:hover { background: #d8ccb6; color: #14100c; }
+.pl-meta { font-size: .62rem; letter-spacing: .08em; line-height: 1.5; overflow: hidden; }
+.pl-track { white-space: nowrap; text-overflow: ellipsis; overflow: hidden; max-width: 9rem; }
+.pl-state { color: #8c8576; font-size: .56rem; letter-spacing: .14em; text-transform: uppercase; }
+.pl-wave { display: flex; align-items: flex-end; gap: 2px; height: 1rem; }
+.pl-wave i { width: 2px; background: var(--lake-glow); height: 30%; animation: wave 1s infinite ease-in-out; }
+.pl-wave i:nth-child(2){animation-delay:.15s} .pl-wave i:nth-child(3){animation-delay:.3s}
+.pl-wave i:nth-child(4){animation-delay:.45s} .pl-wave i:nth-child(5){animation-delay:.6s}
+#player.paused .pl-wave i { animation-play-state: paused; height: 30%; }
+@keyframes wave { 0%,100%{height:25%} 50%{height:100%} }
+
+/* progress / scrubber */
+#progress {
+  position: fixed;
+  left: 0; top: 0; height: 3px;
+  background: var(--bruise);
+  width: 0;
+  z-index: 80;
+  opacity: .8;
+}
+
+/* reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1 !important; transform: none !important; filter: none !important; }
+  .fx-glitch.is-active, .fx-stutter.is-active::before, .fx-stutter.is-active::after { animation: none; }
+}
+
+/* ============================================================
+   CONTINUE button (end of a chapter → next page)
+   ============================================================ */
+.chapter-continue { text-align: center; margin: 4rem 0 2rem; }
+.continue-btn {
+  font-family: var(--font-type);
+  letter-spacing: .28em;
+  text-transform: uppercase;
+  font-size: .78rem;
+  color: var(--ink);
+  text-decoration: none;
+  border: 1px solid var(--ink-soft);
+  padding: .95rem 2.6rem;
+  display: inline-block;
+  transition: all .35s;
+}
+.continue-btn:hover { background: var(--ink); color: var(--paper); letter-spacing: .34em; }
+
+/* ============================================================
+   NIGHT page (the audio interlude — the lake after dark)
+   ============================================================ */
+body.night {
+  background:
+    radial-gradient(125% 95% at 50% 32%, #1c1510, #0e0a07 58%, #060403 100%);
+  color: #d8ccb6;
+}
+body.night.vignette::before { box-shadow: inset 0 0 17rem rgba(0,0,0,.78); }
+
+/* blooming-lilies overlay (screen-blends out of the black) */
+.lily-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+.lily-overlay video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  mix-blend-mode: screen;
+  opacity: .5;
+  filter: saturate(.85) contrast(1.05);
+}
+.lily-overlay.failed { display: none; }
+.lily-overlay::after { /* warm the flowers, sink the edges */
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(70% 60% at 50% 45%, transparent, rgba(8,5,3,.6) 100%);
+}
+
+/* candlelight bloom — always there, reads as intentional with or w/o video */
+.bloom-fallback { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.bloom-fallback span {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+  mix-blend-mode: screen;
+  animation: breathe 11s ease-in-out infinite;
+}
+.bloom-fallback span:nth-child(1) { width: 46vmin; height: 46vmin; left: 18%; top: 30%; background: #6e3a22; opacity: .55; }
+.bloom-fallback span:nth-child(2) { width: 38vmin; height: 38vmin; right: 16%; top: 22%; background: #7a2a20; opacity: .42; animation-delay: -4s; }
+.bloom-fallback span:nth-child(3) { width: 52vmin; height: 52vmin; left: 38%; bottom: 6%; background: #5c4326; opacity: .4; animation-delay: -7s; }
+@keyframes breathe {
+  0%, 100% { transform: translate(0,0) scale(1); opacity: .3; }
+  50%      { transform: translate(2%, -3%) scale(1.12); opacity: .55; }
+}
+
+.interlude { position: relative; z-index: 2; }
+.interlude {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 6rem 1.6rem;
+  text-align: center;
+}
+.interlude-card { max-width: 34rem; width: 100%; }
+.il-kicker {
+  font-family: var(--font-type);
+  letter-spacing: .4em;
+  text-transform: uppercase;
+  font-size: .72rem;
+  color: var(--bruise-soft);
+  margin-bottom: 2.4rem;
+}
+.il-line {
+  font-family: var(--font-prose);
+  font-style: italic;
+  font-size: 1.5rem;
+  line-height: 1.7;
+  color: #ddd0b8;
+  margin: 0 0 3.2rem;
+  text-wrap: pretty;
+}
+.il-line .hand { font-family: var(--font-hand); font-size: 1.9rem; color: var(--bruise-soft); }
+
+/* ripple behind the big player */
+.interlude-card .ap-big { position: relative; }
+
+/* ============================================================
+   AUDIO PLAYERS (block card + big interlude)  built by players-ui.js
+   ============================================================ */
+.ap-block, .ap-big {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 1rem;
+}
+.ap-block {
+  grid-template-areas: "play body" "cap cap";
+  background: rgba(20,16,12,.05);
+  border: 1px solid var(--paper-edge);
+  border-left: 3px solid var(--bruise);
+  padding: 1rem 1.2rem;
+  margin: 2.8rem 0;
+}
+html[data-mood="drowned"] .ap-block { background: rgba(22,40,43,.12); }
+.ap-block .ap-caption {
+  grid-area: cap;
+  font-family: var(--font-hand);
+  font-size: 1.35rem;
+  color: var(--ink-soft);
+  margin-top: .7rem;
+  transform: rotate(-.5deg);
+}
+.ap-big {
+  grid-template-columns: auto 1fr;
+  grid-template-areas: "play body";
+  background: rgba(18,13,9,.55);
+  border: 1px solid rgba(216,204,182,.26);
+  padding: 1.6rem 1.8rem;
+  backdrop-filter: blur(6px);
+}
+
+.ap-play {
+  grid-area: play;
+  width: 3rem; height: 3rem;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: .85rem;
+  display: grid; place-items: center;
+  transition: background .25s, color .25s, transform .2s;
+  flex: none;
+}
+.ap-big .ap-play { width: 4rem; height: 4rem; font-size: 1.1rem; color: #e7dcc6; }
+.ap-block .ap-play { color: var(--ink); }
+.ap-play:hover { transform: scale(1.06); }
+.ap-block .ap-play:hover { background: var(--ink); color: var(--paper); }
+.ap-big .ap-play:hover { background: var(--bruise-soft); color: #1a120e; }
+.playing .ap-play { animation: apPulse 1.6s infinite; }
+@keyframes apPulse { 50% { box-shadow: 0 0 0 .5rem rgba(168,71,59,.14); } }
+
+.ap-body { grid-area: body; min-width: 0; }
+.ap-label {
+  font-family: var(--font-type);
+  font-size: .74rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  margin-bottom: .55rem;
+}
+.ap-block .ap-label { color: var(--ink-soft); }
+.ap-big .ap-label { color: #c9bda7; }
+.ap-bar {
+  height: 3px;
+  background: currentColor;
+  position: relative;
+  cursor: pointer;
+  opacity: .9;
+}
+.ap-block .ap-bar { background: var(--paper-edge); }
+.ap-big .ap-bar { background: rgba(216,204,182,.28); }
+.ap-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: var(--bruise); }
+.ap-big .ap-fill { background: var(--bruise-soft); }
+.ap-time {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-type);
+  font-size: .62rem;
+  letter-spacing: .08em;
+  margin-top: .5rem;
+  opacity: .75;
+}
+.ap-state { text-transform: uppercase; letter-spacing: .16em; font-size: .56rem; }
+.missing .ap-state { color: var(--bruise-soft); }
+.missing .ap-bar { opacity: .35; }
+
+/* ============================================================
+   LISTEN-GATE — locked until the referenced recording finishes
+   ============================================================ */
+.listen-gate { position: relative; }
+.gate-continue.listen-gate {
+  opacity: .3;
+  pointer-events: none;
+  filter: grayscale(1);
+  transition: opacity .9s ease, filter .9s ease;
+}
+.gate-continue.listen-gate.released { opacity: 1; pointer-events: auto; filter: none; }
+.gate-continue.listen-gate::after {
+  content: "listen first";
+  position: absolute;
+  left: 50%; top: calc(100% + .8rem);
+  transform: translateX(-50%);
+  font-family: var(--font-type);
+  font-size: .6rem;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+body.night .gate-continue.listen-gate::after { color: #8a7a64; }
+.gate-continue.listen-gate.released::after { content: ""; }
+/* the video interlude gates on "watch", not "listen" */
+.gate-continue.watch-gate::after { content: "watch first"; }
+.gate-continue.watch-gate.released::after { content: ""; }
+
+/* ============================================================
+   VIDEO INTERLUDE — one play button, then a full-screen video
+   ============================================================ */
+.video-interlude {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.4rem;
+}
+.vi-play {
+  position: relative;
+  width: 5.6rem;
+  height: 5.6rem;
+  border-radius: 50%;
+  border: 1px solid rgba(216,204,182,.4);
+  background: rgba(20,16,12,.25);
+  color: #e7dcc6;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background .4s ease, border-color .4s ease, transform .4s ease;
+}
+.vi-play::before { /* a quiet candlelit halo that breathes */
+  content: "";
+  position: absolute;
+  inset: -.5rem;
+  border-radius: 50%;
+  box-shadow: 0 0 0 0 rgba(168,71,59,.18);
+  animation: viPulse 2.8s ease-in-out infinite;
+}
+@keyframes viPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(168,71,59,.16); }
+  50%      { box-shadow: 0 0 0 .7rem rgba(168,71,59,0); }
+}
+.vi-tri {
+  width: 0; height: 0;
+  margin-left: .35rem; /* optical centering of the triangle */
+  border-left: 1.35rem solid currentColor;
+  border-top: .85rem solid transparent;
+  border-bottom: .85rem solid transparent;
+}
+.vi-play:hover { background: var(--bruise-soft); border-color: var(--bruise-soft); color: #1a120e; transform: scale(1.05); }
+.video-interlude.loading .vi-play { opacity: .55; cursor: progress; }
+.video-interlude.heard .vi-play { opacity: .4; }
+.vi-note {
+  font-family: var(--font-type);
+  font-size: .68rem;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: #8a7a64;
+  margin: 0;
+}
+.video-interlude.missing .vi-note { color: var(--bruise-soft); }
+.vi-headphones {
+  font-family: var(--font-type);
+  font-size: .6rem;
+  letter-spacing: .26em;
+  text-transform: uppercase;
+  color: #8a7a64;
+  opacity: .7;
+  margin: -.7rem 0 0;
+}
+
+/* full-screen stage */
+.video-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: #050302;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .6s ease;
+}
+.video-stage.open { opacity: 1; pointer-events: auto; }
+.video-stage video {
+  max-width: 100vw;
+  max-height: 100vh;
+  width: auto;
+  height: auto;
+}
+/* buffering spinner over the black stage */
+.vs-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .3s ease;
+}
+.video-stage.buffering .vs-loading { opacity: 1; }
+.vs-spin {
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 50%;
+  border: 2px solid rgba(216,204,182,.18);
+  border-top-color: rgba(216,204,182,.7);
+  animation: vsSpin .9s linear infinite;
+}
+@keyframes vsSpin { to { transform: rotate(360deg); } }
+
+.vs-close {
+  position: absolute;
+  top: 1.4rem;
+  right: 1.6rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-type);
+  font-size: .72rem;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: rgba(216,204,182,.55);
+  transition: color .3s ease;
+}
+.vs-close:hover { color: #e7dcc6; }
+
+/* play/pause + fullscreen cluster, bottom-centre, auto-fades */
+.vs-controls {
+  position: absolute;
+  bottom: 1.6rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 1rem;
+  padding: .55rem .8rem;
+  border-radius: 999px;
+  background: rgba(8,5,3,.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  opacity: 0;
+  transition: opacity .4s ease;
+}
+/* visible while paused, on hover, or briefly after a tap (see .controls-peek) */
+.video-stage:hover .vs-controls,
+.video-stage.paused .vs-controls,
+.video-stage.controls-peek .vs-controls { opacity: 1; }
+.vs-icon {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  border: none;
+  background: none;
+  color: #e7dcc6;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background .25s ease, transform .25s ease;
+}
+.vs-icon:hover { background: rgba(231,220,198,.14); transform: scale(1.06); }
+/* pause glyph = two bars; swaps to a play triangle when paused */
+.vs-pause-glyph {
+  width: 1.05rem; height: 1.15rem;
+  border-left: .34rem solid currentColor;
+  border-right: .34rem solid currentColor;
+  box-sizing: border-box;
+}
+.video-stage.paused .vs-pause-glyph {
+  width: 0; height: 0;
+  border-left: 1.05rem solid currentColor;
+  border-right: 0;
+  border-top: .62rem solid transparent;
+  border-bottom: .62rem solid transparent;
+  margin-left: .28rem;
+}
+/* fullscreen glyph = corner brackets */
+.vs-full-glyph {
+  width: 1.2rem; height: 1.05rem;
+  position: relative;
+}
+.vs-full-glyph::before, .vs-full-glyph::after {
+  content: "";
+  position: absolute;
+  width: .42rem; height: .42rem;
+}
+.vs-full-glyph::before {
+  top: 0; left: 0;
+  border-top: 2px solid currentColor;
+  border-left: 2px solid currentColor;
+}
+.vs-full-glyph::after {
+  bottom: 0; right: 0;
+  border-bottom: 2px solid currentColor;
+  border-right: 2px solid currentColor;
+}
+
+/* afterword: hidden until the last recording is heard */
+.afterword.listen-gate {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 1.4s ease, transform 1.4s ease;
+  pointer-events: none;
+}
+.afterword.listen-gate.released { opacity: 1; transform: none; pointer-events: auto; }
+
+/* continue button styled for the night page */
+body.night .continue-btn { color: #e7dcc6; border-color: rgba(216,204,182,.4); }
+body.night .continue-btn:hover { background: var(--bruise-soft); color: #1a120e; }
+
+@media (max-width: 640px) {
+  :root { --prose-size: 1.18rem; }
+  #player { left: .8rem; right: .8rem; bottom: .8rem; }
+  .il-line { font-size: 1.3rem; }
+}

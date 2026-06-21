@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en" data-mood="warm">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>crying during sex — a recording</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..600;1,6..72,300..600&family=Special+Elite&family=Caveat:wght@400;600&family=Spectral:ital,wght@0,300;0,400;1,300;1,400&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body class="night vignette">
+
+<!-- candlelight bloom (always present, behind everything) -->
+<div class="bloom-fallback" aria-hidden="true"><span></span><span></span><span></span></div>
+
+<!-- blooming lilies, screen-blended out of the dark.
+     Loaded as a blob (the preview server doesn't do byte-range requests, which
+     direct <video src> playback needs). Falls back to the bloom if anything fails. -->
+<div class="lily-overlay" id="lily" aria-hidden="true">
+  <video id="lilyvid" muted loop playsinline></video>
+</div>
+<script>
+(function(){
+  var wrap=document.getElementById('lily'), v=document.getElementById('lilyvid');
+  function fail(){ wrap.classList.add('failed'); }
+  v.addEventListener('error', fail);
+  fetch('assets/lilies.mp4')
+    .then(function(r){ if(!r.ok) throw 0; return r.blob(); })
+    .then(function(b){ v.src=URL.createObjectURL(b); var p=v.play(); if(p&&p.catch)p.catch(function(){}); })
+    .catch(fail);
+})();
+</script>
+
+
+
+<!-- ============================================================
+     VIDEO INTERLUDE — no words to read, only a recording.
+     One play button → the edited video plays full-screen.
+     The "continue" stays locked until the video finishes.
+     Drop assets/interlude.mp4 in to make it real (missing = continue
+     releases anyway so you're never stuck).
+     ============================================================ -->
+<section class="interlude" data-screen-label="interlude">
+  <div class="interlude-card">
+    <p class="il-kicker">before the end</p>
+    <p class="il-line">
+      I am leaving you with a piece of Emi.
+      <br /><br />Press play, then continue with the story.
+    </p>
+
+    <div class="video-interlude" id="il-rec">
+      <button class="vi-play" type="button" aria-label="play the recording">
+        <span class="vi-tri" aria-hidden="true"></span>
+      </button>
+      <p class="vi-note">a recording — unmarked</p>
+      <p class="vi-headphones">best watched with headphones</p>
+    </div>
+
+    <div style="margin-top:3.4rem;">
+      <a class="continue-btn gate-continue listen-gate watch-gate" data-requires="#il-rec"
+         href="chapter-21.html">continue</a>
+    </div>
+  </div>
+</section>
+
+<!-- full-screen video stage (fades in over the black when you press play) -->
+<div class="video-stage" id="video-stage" aria-hidden="true">
+  <video id="interlude-video" playsinline preload="metadata"></video>
+  <div class="vs-loading" id="vs-loading"><span class="vs-spin" aria-hidden="true"></span></div>
+  <div class="vs-controls">
+    <button class="vs-icon" id="vs-playpause" type="button" aria-label="pause">
+      <span class="vs-pause-glyph" aria-hidden="true"></span>
+    </button>
+    <button class="vs-icon" id="vs-full" type="button" aria-label="fullscreen">
+      <span class="vs-full-glyph" aria-hidden="true"></span>
+    </button>
+  </div>
+  <button class="vs-close" type="button" aria-label="close">close ✕</button>
+</div>
+
+<script>
+(function () {
+  /* ============================================================
+     ↓↓↓  PASTE YOUR HOSTED VIDEO URL HERE  ↓↓↓
+     A direct link to the .mp4 (Cloudflare R2, Bunny, etc.).
+     Must be a raw file URL that ends in .mp4 — not a YouTube/Vimeo
+     page link. Leave it blank and the page stays in "not added
+     yet" mode (continue still works, nobody gets stuck).
+     ============================================================ */
+  var VIDEO_URL = "https://pub-f2fca4ecd6f445e0937137fbf1673fc1.r2.dev/interlude.mp4";
+
+  var rec     = document.getElementById('il-rec');
+  var trigger = rec.querySelector('.vi-play');
+  var note    = rec.querySelector('.vi-note');
+  var stage   = document.getElementById('video-stage');
+  var video   = document.getElementById('interlude-video');
+  var close   = stage.querySelector('.vs-close');
+  var spin    = document.getElementById('vs-loading');
+  var playBtn = document.getElementById('vs-playpause');
+  var fullBtn = document.getElementById('vs-full');
+  var src     = VIDEO_URL.trim();
+  var primed  = false, missing = false;
+
+  // releasing the gate (players-ui.js listens for ap:done on #il-rec)
+  function release() { rec.dispatchEvent(new CustomEvent('ap:done', { bubbles: true })); }
+
+  function markMissing() {
+    missing = true;
+    rec.classList.add('missing');
+    note.textContent = 'video not added yet';
+    release(); // humane: never stuck while the file is still coming
+  }
+
+  function open() {
+    stage.classList.add('open');
+    stage.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('video-playing');
+    stage.classList.add('buffering');         // spinner until the first frame is ready
+    var p = video.play(); if (p && p.catch) p.catch(function () {});
+  }
+  function shut() {
+    stage.classList.remove('open');
+    stage.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('video-playing');
+    video.pause();
+  }
+
+  // streaming: hide the spinner the moment there's enough buffered to play
+  video.addEventListener('playing',    function () { stage.classList.remove('buffering'); });
+  video.addEventListener('canplay',     function () { stage.classList.remove('buffering'); });
+  video.addEventListener('waiting',     function () { stage.classList.add('buffering'); });
+  // if the source can't be loaded/decoded at all, treat it as not-yet-added
+  video.addEventListener('error', function () { if (stage.classList.contains('open')) { shut(); } markMissing(); });
+
+  video.addEventListener('ended', function () {
+    rec.classList.add('heard');
+    shut();
+    release();
+  });
+  close.addEventListener('click', shut);
+  stage.addEventListener('click', function (e) { if (e.target === stage) shut(); });
+  document.addEventListener('keydown', function (e) {
+    if (!stage.classList.contains('open')) return;
+    if (e.key === 'Escape') shut();
+    if (e.key === ' ' || e.key === 'k') { e.preventDefault(); toggle(); }
+  });
+
+  // ---- pause / play -------------------------------------------------
+  var peekT;
+  function peek() {            // briefly reveal controls (for touch, no hover)
+    stage.classList.add('controls-peek');
+    clearTimeout(peekT);
+    peekT = setTimeout(function () { stage.classList.remove('controls-peek'); }, 2600);
+  }
+  function toggle() {
+    if (video.paused) { var p = video.play(); if (p && p.catch) p.catch(function(){}); }
+    else { video.pause(); }
+    peek();
+  }
+  function syncBtn() {
+    var paused = video.paused;
+    stage.classList.toggle('paused', paused);
+    playBtn.setAttribute('aria-label', paused ? 'play' : 'pause');
+  }
+  video.addEventListener('play',  syncBtn);
+  video.addEventListener('pause', syncBtn);
+  playBtn.addEventListener('click', function (e) { e.stopPropagation(); toggle(); });
+  // tap the film itself to pause / resume
+  video.addEventListener('click', function (e) { e.stopPropagation(); toggle(); });
+
+  // ---- fullscreen (real, including iOS native) ----------------------
+  fullBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    // iOS Safari won't fullscreen a div — it fullscreens the <video> natively
+    if (video.webkitEnterFullscreen && !document.fullscreenEnabled) {
+      video.webkitEnterFullscreen();
+      return;
+    }
+    var fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+    if (fsEl) {
+      (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    } else {
+      var req = stage.requestFullscreen || stage.webkitRequestFullscreen;
+      if (req) req.call(stage);
+      else if (video.webkitEnterFullscreen) video.webkitEnterFullscreen();
+    }
+  });
+
+  trigger.addEventListener('click', function () {
+    if (missing) { release(); return; }
+    if (!src)    { markMissing(); return; }   // no URL pasted in yet
+    // stream straight from the hosted file — starts as soon as the first
+    // chunk arrives instead of waiting for the whole thing to download
+    if (!primed) { video.src = src; primed = true; }
+    open();
+  });
+})();
+</script>
+
+<div id="tweaks-root"></div>
+
+<script src="players-ui.js"></script>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="tweaks-app.jsx"></script>
+
+</body>
+</html>
